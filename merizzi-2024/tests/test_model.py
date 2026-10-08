@@ -60,3 +60,19 @@ def test_ema_moves_towards_online_weights(small_cfg):
     for b, e, p in zip(before, model.ema_network.parameters(), model.network.parameters(),
                        strict=True):
         assert torch.allclose(e, (b + p) / 2)
+
+
+def test_layernorm2d_matches_keras_channel_layernorm():
+    from merizzi2024.model.unet import LayerNorm2d
+
+    torch.manual_seed(0)
+    norm = LayerNorm2d(6, eps=1e-3)
+    with torch.no_grad():
+        norm.weight.uniform_(0.5, 1.5)
+        norm.bias.uniform_(-0.5, 0.5)
+    x = torch.randn(2, 6, 5, 7)
+    mean = x.mean(dim=1, keepdim=True)
+    var = x.var(dim=1, keepdim=True, unbiased=False)
+    expected = (x - mean) / torch.sqrt(var + 1e-3)
+    expected = expected * norm.weight[None, :, None, None] + norm.bias[None, :, None, None]
+    assert torch.allclose(norm(x), expected, atol=1e-5)

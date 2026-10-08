@@ -37,10 +37,9 @@ class LayerNorm2d(nn.Module):
         self.bias = nn.Parameter(torch.zeros(channels))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        mean = x.mean(dim=1, keepdim=True)
-        var = x.var(dim=1, keepdim=True, unbiased=False)
-        x = (x - mean) * torch.rsqrt(var + self.eps)
-        return x * self.weight[None, :, None, None] + self.bias[None, :, None, None]
+        # One fused kernel over the channel axis (a free view when x is channels_last).
+        y = F.layer_norm(x.permute(0, 2, 3, 1), (x.shape[1],), self.weight, self.bias, self.eps)
+        return y.permute(0, 3, 1, 2)
 
 
 class SinusoidalEmbedding(nn.Module):

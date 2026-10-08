@@ -1,0 +1,47 @@
+# The authors' own preprocessed data (Kaggle link in their README): CERRA 256x256 at 0.05 deg
+# and ERA5 52x52 at 0.25 deg over Italy, 3-hourly, 2010-2019 / 2009 / 2020. Put the .npy files
+# in data.root, then run `merizzi2024 prepare --config configs/kaggle-italy.yaml` to compute
+# the maxima (setup.py: 31.347172 and 26.298004) and the standardisation statistics.
+name: paper-kaggle-italy
+data:
+  root: data/kaggle-italy
+  splits:
+    train: {hr: wind_speed_italy_CERRA_2010-2019.npy, lr: wind_speed_italy_ERA5_2010-2019.npy}
+    test2009: {hr: wind_speed_italy_CERRA_2009.npy, lr: wind_speed_italy_ERA5_2009.npy}
+    test2020: {hr: wind_speed_italy_CERRA_2020.npy, lr: wind_speed_italy_ERA5_2020.npy}
+  train_split: train
+  test_splits: [test2009, test2020]
+  hr_shape: [256, 256]
+  lr_shape: [52, 52]
+  frame_offsets: [-2, -1, 0, 1]   # t-6h, t-3h, t0, t+3h
+  hr_max: null   # written by `merizzi2024 prepare`
+  lr_max: null
+  standardize: true
+  stats: null
+model:
+  widths: [64, 128, 256, 384]
+  block_depth: 3
+  embedding_dims: 64
+  embedding_max_frequency: 1000.0
+  bottleneck_attention: true
+  schedule: cosine
+  min_signal_rate: 0.015
+  max_signal_rate: 0.95
+  ema_decay: 0.999
+train:
+  batch_size: 8                # Table 7
+  max_steps: 110000            # 220 epochs x 500 steps
+  lr: 1.0e-4
+  lr_final: 1.0e-5
+  weight_decay: 1.0e-5
+  weight_decay_final: 1.0e-6
+  precision: 16-mixed
+  val_every_n_steps: 1000
+  val_batches: 2
+  seed: 0
+  num_workers: 4
+  out_dir: runs/kaggle-italy
+sample:
+  diffusion_steps: 5
+  ensemble_size: 15
+  batch_size: 32

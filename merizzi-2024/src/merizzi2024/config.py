@@ -7,6 +7,7 @@ normalization maxima that the data preparation commands write back into the YAML
 from __future__ import annotations
 
 import dataclasses
+import re
 import types
 import typing
 from dataclasses import dataclass, field
@@ -174,6 +175,53 @@ def _to_plain(obj: Any) -> Any:
     if isinstance(obj, Path):
         return str(obj)
     return obj
+
+
+def write_normalisation(cfg: Config, path: str | Path | None = None) -> Path:
+    """Rewrite only ``hr_max``, ``lr_max`` and ``stats`` inside the ``data`` block of the YAML
+    file, keeping every other line (and every comment) as it is."""
+    path = Path(path) if path is not None else cfg.path
+    if path is None:
+        raise ValueError("no path to write the normalisation values to")
+    lines = path.read_text().splitlines()
+    out: list[str] = []
+    in_data = False
+    skip_stats_block = False
+    done: set[str] = set()
+    for line in lines:
+        stripped = line.strip()
+        if skip_stats_block:
+            if line.startswith(" ") and stripped and not stripped.startswith("#"):
+                continue  # old nested stats entries
+            skip_stats_block = False
+        if not line.startswith(" ") and stripped and not stripped.startswith("#"):
+            in_data = stripped == "data:"
+        if in_data:
+            m = re.match(r"^(\s+)(hr_max|lr_max|stats):(.*)$", line)
+            if m:
+                indent, key, rest = m.groups()
+                comment = ""
+                if "#" in rest:
+                    comment = "  " + rest[rest.index("#"):].strip()
+                if key == "stats":
+                    stats = cfg.data.stats
+                    if stats is None:
+                        out.append(f"{indent}stats: null{comment}")
+                    else:
+                        out.append(f"{indent}stats:{comment}")
+                        for name in ("lr_mean", "lr_var", "hr_mean", "hr_var"):
+                            out.append(f"{indent}  {name}: {getattr(stats, name)!r}")
+                    skip_stats_block = True
+                else:
+                    out.append(f"{indent}{key}: {getattr(cfg.data, key)!r}{comment}")
+                done.add(key)
+                continue
+        out.append(line)
+    missing = {"hr_max", "lr_max", "stats"} - done
+    if missing:
+        raise ValueError(f"{path}: data block has no {sorted(missing)} entries to update")
+    path.write_text("\n".join(out) + "\n")
+    return path
 
 
 def save_config(cfg: Config, path: str | Path | None = None) -> Path:

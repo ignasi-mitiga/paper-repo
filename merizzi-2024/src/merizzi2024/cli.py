@@ -26,6 +26,22 @@ def cmd_make_synthetic(args: argparse.Namespace) -> None:
     print(f"hr_max={cfg.data.hr_max:.4f} lr_max={cfg.data.lr_max:.4f}")
 
 
+def cmd_prepare(args: argparse.Namespace) -> None:
+    """Compute the normalisation entries for data files that already exist (e.g. Kaggle)."""
+    from merizzi2024.config import write_normalisation
+    from merizzi2024.data.synthetic import fill_normalisation
+
+    cfg = load_config(args.config)
+    for split in cfg.data.splits:
+        for path in cfg.data.split_paths(split):
+            if not path.exists():
+                raise SystemExit(f"missing data file: {path}")
+    fill_normalisation(cfg)
+    print(f"hr_max={cfg.data.hr_max:.6f} lr_max={cfg.data.lr_max:.6f} stats={cfg.data.stats}")
+    if not args.no_write_config:
+        print(f"written into {write_normalisation(cfg)}")
+
+
 def cmd_download_era5(args: argparse.Namespace) -> None:
     from merizzi2024.data.era5_wb2 import download_era5
 
@@ -91,6 +107,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-write-config", action="store_true",
                    help="do not write the normalisation stats back into the YAML")
     p.set_defaults(func=cmd_make_synthetic)
+
+    p = sub.add_parser("prepare", help="compute normalisation stats for existing .npy files")
+    p.add_argument("--config", required=True)
+    p.add_argument("--no-write-config", action="store_true")
+    p.set_defaults(func=cmd_prepare)
 
     p = sub.add_parser("download-era5", help="fetch ERA5 wind speed from WeatherBench 2 (GCS)")
     p.add_argument("--config", required=True)

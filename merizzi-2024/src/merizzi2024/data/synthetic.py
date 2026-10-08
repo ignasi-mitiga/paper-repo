@@ -17,7 +17,7 @@ import torch
 import torch.nn.functional as F
 from scipy import ndimage
 
-from merizzi2024.config import ChannelStats, Config, save_config
+from merizzi2024.config import ChannelStats, Config, write_normalisation
 from merizzi2024.data.memmap import field_max, field_mean_var
 
 
@@ -82,7 +82,7 @@ def make_synthetic_dataset(cfg: Config, write_config: bool = True) -> dict[str, 
         written[split] = {"hr": hr_path, "lr": lr_path}
     fill_normalisation(cfg)
     if write_config and cfg.path is not None:
-        save_config(cfg)
+        write_normalisation(cfg)
     return written
 
 

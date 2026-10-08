@@ -1,60 +1,57 @@
+# Paper-size configuration (Merizzi et al. 2024, Table 7 + released code), pointed at the
+# public WeatherBench 2 copy of ERA5 10 m wind speed: 128x64 (2.8 deg) -> 512x256 (0.7 deg),
+# 6-hourly, so the four conditioning frames are t-12h, t-6h, t0, t+6h.
 name: paper-era5-wb2
 data:
   root: data/era5-wb2
   splits:
-    train:
-      hr: train_hr.npy
-      lr: train_lr.npy
-    test2009:
-      hr: test2009_hr.npy
-      lr: test2009_lr.npy
-    test2020:
-      hr: test2020_hr.npy
-      lr: test2020_lr.npy
+    train: {hr: train_hr.npy, lr: train_lr.npy}
+    test2009: {hr: test2009_hr.npy, lr: test2009_lr.npy}
+    test2020: {hr: test2020_hr.npy, lr: test2020_lr.npy}
   train_split: train
-  test_splits:
-  - test2009
-  - test2020
-  hr_shape:
-  - 256
-  - 512
-  lr_shape:
-  - 64
-  - 128
-  frame_offsets:
-  - -2
-  - -1
-  - 0
-  - 1
-  hr_max: 41.747352600097656
+  test_splits: [test2009, test2020]
+  hr_shape: [256, 512]
+  lr_shape: [64, 128]
+  frame_offsets: [-2, -1, 0, 1]
+  hr_max: 41.747352600097656   # written by `merizzi2024 download-era5` (training-split maximum, m/s)
   lr_max: 34.28621292114258
-  standardize: true
-  stats:
-    lr_mean: 0.1855108917167912
-    lr_var: 0.010504203594617019
-    hr_mean: 0.15221083291906334
-    hr_var: 0.007834514283830127
+  standardize: true   # false -> the max-normalisation only that the paper text describes
+  stats:   # per-field mean/variance of the max-normalised training data, written by download-era5
+  lr_mean: 0.1855108917167912
+  lr_var: 0.010504203594617019
+  hr_mean: 0.15221083291906334
+  hr_var: 0.007834514283830127
+era5:
+  bucket_root: gs://weatherbench2/datasets/era5
+  hr_store: 1959-2022-6h-512x256_equiangular_conservative.zarr
+  lr_store: 1959-2022-6h-128x64_equiangular_conservative.zarr
+  variable: 10m_wind_speed
+  years:
+    train: [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
+    test2009: [2009]
+    test2020: [2020]
+synthetic:            # `make-synthetic --config configs/paper.yaml` writes paper-shaped fake data
+  num_train: 400
+  num_test: 120
+  blur_sigma: 2.0
+  seed: 0
 model:
-  widths:
-  - 64
-  - 128
-  - 256
-  - 384
+  widths: [64, 128, 256, 384]
   block_depth: 3
   embedding_dims: 64
   embedding_max_frequency: 1000.0
-  bottleneck_attention: true
-  schedule: cosine
+  bottleneck_attention: true   # false -> the plain residual bottleneck the paper text describes
+  schedule: cosine             # linear -> the linear noise-rate schedule the paper text describes
   min_signal_rate: 0.015
   max_signal_rate: 0.95
   ema_decay: 0.999
 train:
-  batch_size: 4
-  max_steps: 110000
-  lr: 0.0001
-  lr_final: 1.0e-05
-  weight_decay: 1.0e-05
-  weight_decay_final: 1.0e-06
+  batch_size: 4                # paper: 8 at 256x256; 512x256 doubles the pixels
+  max_steps: 110000            # paper: 220 epochs x 500 steps
+  lr: 1.0e-4
+  lr_final: 1.0e-5
+  weight_decay: 1.0e-5
+  weight_decay_final: 1.0e-6
   precision: 16-mixed
   val_every_n_steps: 1000
   val_batches: 2
@@ -65,29 +62,3 @@ sample:
   diffusion_steps: 5
   ensemble_size: 15
   batch_size: 32
-synthetic:
-  num_train: 400
-  num_test: 120
-  blur_sigma: 2.0
-  seed: 0
-era5:
-  bucket_root: gs://weatherbench2/datasets/era5
-  hr_store: 1959-2022-6h-512x256_equiangular_conservative.zarr
-  lr_store: 1959-2022-6h-128x64_equiangular_conservative.zarr
-  variable: 10m_wind_speed
-  years:
-    train:
-    - 2010
-    - 2011
-    - 2012
-    - 2013
-    - 2014
-    - 2015
-    - 2016
-    - 2017
-    - 2018
-    - 2019
-    test2009:
-    - 2009
-    test2020:
-    - 2020

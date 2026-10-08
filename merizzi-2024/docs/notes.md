@@ -96,11 +96,13 @@ Minor: Table 2's caption says "for the year 2020" but lists both years.
 
 ### Authors' real data
 
-The notebook expects `wind_speed_italy_CERRA_{2010-2019,2020,2009}.npy` `(N, 256, 256)` and `wind_speed_italy_ERA5_*.npy` `(N, 52, 52)`, N = 29216, 2928, 2920 (8 frames per day; `setup.py`), which the README says the Kaggle dataset provides. Values are m/s; training maxima 31.347172 (CERRA) and 26.298004 (ERA5); grid 6 to 18.75E, 35 to 47.75N at 0.05 deg (`cyl.txt`), ERA5 at 0.25 deg. To use them, write a config with `data.root` at the folder, `data.splits` mapping `train`, `test2009`, `test2020` to those `hr`/`lr` names, `hr_shape: [256, 256]`, `lr_shape: [52, 52]`, then from Python call `fill_normalisation(cfg)` (`data/synthetic.py`) and `save_config(cfg)`; there is no CLI command for pre-existing files, and the authors' `correct_diffusion_mean/variance.npy` are not released. Their recipe (`how_to_reproject_CERRA.md`): download ERA5 (u and v, hours 00, 03, ..., 21) and CERRA (10 m wind speed, analysis) single levels from the CDS as GRIB for the box, remap CERRA with `cdo remapbil,cyl.txt` (lon/lat, 256 x 256, origin 6E / 35N, step 0.05), load with `xarray`/`eccodes`, flip CERRA's latitude so row 0 is north, save `.npy`.
+The notebook expects `wind_speed_italy_CERRA_{2010-2019,2020,2009}.npy` `(N, 256, 256)` and `wind_speed_italy_ERA5_*.npy` `(N, 52, 52)`, N = 29216, 2928, 2920 (8 frames per day; `setup.py`), which the README says the Kaggle dataset provides. Values are m/s; training maxima 31.347172 (CERRA) and 26.298004 (ERA5); grid 6 to 18.75E, 35 to 47.75N at 0.05 deg (`cyl.txt`), ERA5 at 0.25 deg. To use them, write a config with `data.root` at the folder, `data.splits` mapping `train`, `test2009`, `test2020` to those `hr`/`lr` names, `hr_shape: [256, 256]`, `lr_shape: [52, 52]`, then run `merizzi2024 prepare --config configs/kaggle-italy.yaml` (that config already maps the notebook's file names and shapes); the authors' `correct_diffusion_mean/variance.npy` are not needed, the statistics are recomputed. Their recipe (`how_to_reproject_CERRA.md`): download ERA5 (u and v, hours 00, 03, ..., 21) and CERRA (10 m wind speed, analysis) single levels from the CDS as GRIB for the box, remap CERRA with `cdo remapbil,cyl.txt` (lon/lat, 256 x 256, origin 6E / 35N, step 0.05), load with `xarray`/`eccodes`, flip CERRA's latitude so row 0 is north, save `.npy`.
 
 ### WeatherBench 2 ERA5 example
 
-`merizzi2024 download-era5 --config configs/paper.yaml` (`data/era5_wb2.py`; `era5` extra: `xarray`, `zarr`, `gcsfs`) streams `10m_wind_speed` anonymously from `gs://weatherbench2/datasets/era5`: high-res store `1959-2022-6h-512x256_equiangular_conservative.zarr` (about 0.7 deg) and low-res store `1959-2022-6h-128x64_equiangular_conservative.zarr` (about 2.8 deg). Years 2010-2019 go to `train`, 2009 to `test2009`, 2020 to `test2020` (`era5.years`); the global map is written north-up as float32 `(T, 256, 512)` and `(T, 64, 128)`, T = 14,608 / 1,460 / 1,464 (training high-res file 7.66 GB). The stores are 6-hourly, so the conditioning frames are t-12h, t-6h, t0, t+6h; the ratio is 4 rather than 4.9, and both fields are coarsenings of the same reanalysis, not two models.
+`merizzi2024 download-era5 --config configs/paper.yaml` (`data/era5_wb2.py`; `era5` extra: `xarray`, `zarr`, `gcsfs`) streams `10m_wind_speed` anonymously from `gs://weatherbench2/datasets/era5`: high-res store `1959-2022-6h-512x256_equiangular_conservative.zarr` (about 0.7 deg) and low-res store `1959-2022-6h-128x64_equiangular_conservative.zarr` (about 2.8 deg). Years 2010-2019 go to `train`, 2009 to `test2009`, 2020 to `test2020` (`era5.years`); the global map is written north-up as float32 `(T, 256, 512)` and `(T, 64, 128)`, T = 14,608 / 1,460 / 1,464 (training high-res file 7.66 GB). A sample frame, its low-res input and the bilinear baseline:
+
+![ERA5 sample](figures/era5_wb2_sample.png) The stores are 6-hourly, so the conditioning frames are t-12h, t-6h, t0, t+6h; the ratio is 4 rather than 4.9, and both fields are coarsenings of the same reanalysis, not two models.
 
 ### Synthetic data
 
@@ -108,7 +110,7 @@ The notebook expects `wind_speed_italy_CERRA_{2010-2019,2020,2009}.npy` `(N, 256
 
 ### Normalisation
 
-Both prepare commands call `fill_normalisation`: `data.hr_max` and `data.lr_max` are the training-split maxima (`setup.py`'s constants; test splits reuse them, Sect. 4.1) and `data.stats` the mean and variance of each max-normalised training field (`lr_mean`, `lr_var`, `hr_mean`, `hr_var`). They are written back into the YAML unless `--no-write-config` (the rewrite drops YAML comments). `DiffusionSR` keeps them as buffers (`channel_mean`, `channel_std`; the four conditioning channels share the low-res statistics, unlike the authors' per-channel `layers.Normalization`), so checkpoints are self-contained.
+Both prepare commands call `fill_normalisation`: `data.hr_max` and `data.lr_max` are the training-split maxima (`setup.py`'s constants; test splits reuse them, Sect. 4.1) and `data.stats` the mean and variance of each max-normalised training field (`lr_mean`, `lr_var`, `hr_mean`, `hr_var`). They are written back into the YAML unless `--no-write-config`; only the `hr_max`, `lr_max` and `stats` entries of the `data` block are rewritten (`write_normalisation`), so comments are kept. `merizzi2024 prepare` does the same for data files that already exist. `DiffusionSR` keeps them as buffers (`channel_mean`, `channel_std`; the four conditioning channels share the low-res statistics, unlike the authors' per-channel `layers.Normalization`), so checkpoints are self-contained.
 
 ## How to run
 
@@ -120,12 +122,13 @@ merizzi2024 train --config configs/small.yaml                 # runs/small/{chec
 merizzi2024 evaluate --config configs/small.yaml --checkpoint runs/small/checkpoints/last.ckpt
 
 merizzi2024 download-era5 --config configs/paper.yaml         # data/era5-wb2/*.npy, about 10 GB
-merizzi2024 train --config configs/paper.yaml --max-time 00:08:00:00
+merizzi2024 prepare --config configs/kaggle-italy.yaml         # stats for the authors' Kaggle files
+merizzi2024 train --config configs/paper.yaml --max-time 00:01:00:00   # DD:HH:MM:SS; omit for all 110k steps
 merizzi2024 train --config configs/paper.yaml --resume runs/paper/checkpoints/last.ckpt
 merizzi2024 evaluate --config configs/paper.yaml --checkpoint runs/paper/checkpoints/last.ckpt --splits test2009 test2020
 ```
 
-`train` flags: `--max-steps`, `--max-time` (Lightning `DD:HH:MM:SS`), `--out-dir`, `--resume <ckpt>`, `--no-progress`. `evaluate` prints a markdown table (MSE, PSNR, SSIM per split and method) and writes `results.json` and `samples_<split>.png` to `<train.out_dir>/eval` or `--out-dir`; flags `--splits`, `--methods bilinear single ensemble`, `--max-batches`, `--steps`, `--ensemble-size`, `--batch-size`, `--seed`, `--no-images`, `--no-amp` (fp16 autocast on CUDA by default). `make-synthetic` takes `--root`, `--num-train`, `--num-test`, `--no-write-config`; `download-era5` takes `--splits`, `--overwrite`.
+`train` flags: `--max-steps`, `--max-time` (Lightning `DD:HH:MM:SS`), `--out-dir`, `--resume <ckpt>`, `--no-progress`. `evaluate` prints a markdown table (MSE, PSNR, SSIM per split and method) and writes `results.json` and `samples_<split>.png` to `<train.out_dir>/eval` or `--out-dir`; flags `--splits`, `--methods bilinear single ensemble`, `--max-batches`, `--steps`, `--ensemble-size`, `--batch-size`, `--seed`, `--no-images`, `--no-amp` (fp16 autocast on CUDA by default). `make-synthetic` takes `--root`, `--num-train`, `--num-test`, `--no-write-config`; `download-era5` takes `--splits`, `--overwrite`; `prepare` takes `--no-write-config`.
 
 Tests (`tests/`; `pyproject.toml` excludes `slow` by default):
 
