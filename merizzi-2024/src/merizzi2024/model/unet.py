@@ -173,7 +173,8 @@ class UNet(nn.Module):
         divisor = 2**self.num_stages
         if h % divisor or w % divisor:
             raise ValueError(f"spatial size {(h, w)} must be divisible by {divisor}")
-        e = self.embedding(noise_variances.reshape(b, 1, 1, 1).to(images.dtype)).expand(-1, -1, h, w)
+        e = self.embedding(noise_variances.reshape(b, 1, 1, 1).to(images.dtype))
+        e = e.expand(-1, -1, h, w)
         x = torch.cat([self.stem(images), e], dim=1)
         skips: list[torch.Tensor] = []
         for block in self.down_blocks:

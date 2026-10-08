@@ -75,8 +75,8 @@ class DiffusionSR(nn.Module):
         pred_images = (noisy_images[:, -1:] - noise_rates * pred_noises) / signal_rates
         return pred_noises, pred_images
 
-    def training_losses(self, batch: torch.Tensor, generator: torch.Generator | None = None
-                        ) -> dict[str, torch.Tensor]:
+    def training_losses(self, batch: torch.Tensor, generator: torch.Generator | None = None,
+                        use_ema: bool = False) -> dict[str, torch.Tensor]:
         """``batch``: (B, F+1, H, W) in [0, 1] units. Returns noise (training) and image losses."""
         images = self.normalize(batch)
         cond, target = images[:, :-1], images[:, -1:]
@@ -87,7 +87,7 @@ class DiffusionSR(nn.Module):
         noise_rates, signal_rates = self.schedule(diffusion_times)
         noisy_target = signal_rates * target + noise_rates * noises
         pred_noises, pred_images = self.denoise(
-            torch.cat([cond, noisy_target], dim=1), noise_rates, signal_rates, use_ema=False
+            torch.cat([cond, noisy_target], dim=1), noise_rates, signal_rates, use_ema=use_ema
         )
         return {
             "noise_loss": F.l1_loss(pred_noises, noises),
@@ -123,7 +123,8 @@ class DiffusionSR(nn.Module):
         cond = self.normalize(torch.cat([cond_raw, torch.zeros_like(cond_raw[:, :1])], 1))[:, :-1]
         noise = torch.randn((cond.shape[0], 1, *cond.shape[2:]), generator=generator,
                             device=cond.device, dtype=cond.dtype)
-        return self.denormalize_target(self.reverse_diffusion(cond, noise, diffusion_steps, use_ema))
+        x0 = self.reverse_diffusion(cond, noise, diffusion_steps, use_ema)
+        return self.denormalize_target(x0)
 
     @torch.no_grad()
     def sample_ensemble(self, cond_raw: torch.Tensor, diffusion_steps: int, ensemble_size: int,

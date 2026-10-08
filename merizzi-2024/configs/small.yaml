@@ -1,27 +1,41 @@
-# Shrunken configuration of the same architecture, used by the tests and for quick
-# synthetic runs. Shapes keep the paper's ~4.9x ratio (13x13 -> 64x64).
 name: small
 data:
   root: data/synthetic-small
   splits:
-    train: {hr: train_hr.npy, lr: train_lr.npy}
-    test: {hr: test_hr.npy, lr: test_lr.npy}
+    train:
+      hr: train_hr.npy
+      lr: train_lr.npy
+    test:
+      hr: test_hr.npy
+      lr: test_lr.npy
   train_split: train
-  test_splits: [test]
-  hr_shape: [64, 64]
-  lr_shape: [13, 13]
-  frame_offsets: [-2, -1, 0, 1]
-  hr_max: null        # filled in by `merizzi2024 make-synthetic` / `prepare`
-  lr_max: null
+  test_splits:
+  - test
+  hr_shape:
+  - 64
+  - 64
+  lr_shape:
+  - 13
+  - 13
+  frame_offsets:
+  - -2
+  - -1
+  - 0
+  - 1
+  hr_max: 41.0474853515625
+  lr_max: 27.94830894470215
   standardize: true
-  stats: null         # per-channel mean/var, filled in by the prepare step
-synthetic:
-  num_train: 768
-  num_test: 192
-  blur_sigma: 1.5
-  seed: 0
+  stats:
+    lr_mean: 0.2545951691317489
+    lr_var: 0.024714217314415976
+    hr_mean: 0.1732825593753511
+    hr_var: 0.01612223372669543
 model:
-  widths: [16, 32, 64, 96]
+  widths:
+  - 16
+  - 32
+  - 64
+  - 96
   block_depth: 1
   embedding_dims: 16
   embedding_max_frequency: 1000.0
@@ -33,10 +47,10 @@ model:
 train:
   batch_size: 8
   max_steps: 300
-  lr: 1.0e-3
-  lr_final: 1.0e-4
-  weight_decay: 1.0e-5
-  weight_decay_final: 1.0e-6
+  lr: 0.001
+  lr_final: 0.0001
+  weight_decay: 1.0e-05
+  weight_decay_final: 1.0e-06
   precision: 32-true
   val_every_n_steps: 100
   val_batches: 1
@@ -47,3 +61,14 @@ sample:
   diffusion_steps: 5
   ensemble_size: 4
   batch_size: 16
+synthetic:
+  num_train: 768
+  num_test: 192
+  blur_sigma: 1.5
+  seed: 0
+era5:
+  bucket_root: gs://weatherbench2/datasets/era5
+  hr_store: 1959-2022-6h-512x256_equiangular_conservative.zarr
+  lr_store: 1959-2022-6h-128x64_equiangular_conservative.zarr
+  variable: 10m_wind_speed
+  years: {}

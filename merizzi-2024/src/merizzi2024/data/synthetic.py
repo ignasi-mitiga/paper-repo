@@ -36,7 +36,8 @@ def generate_wind_sequence(num_frames: int, hr_shape: tuple[int, int], rng: np.r
     field = np.zeros((num_frames, h, w), dtype=np.float32)
     for k in range(octaves):
         spatial_sigma = max(h, w) / (6 * 2**k)
-        base = _smooth_noise(rng, (num_frames, h, w), (temporal_sigma, spatial_sigma, spatial_sigma),
+        base = _smooth_noise(rng, (num_frames, h, w),
+                             (temporal_sigma, spatial_sigma, spatial_sigma),
                              ("reflect", "wrap", "wrap"))
         angle = rng.uniform(0, 2 * np.pi)
         velocity = drift * (k + 1) * np.array([np.sin(angle), np.cos(angle)])
