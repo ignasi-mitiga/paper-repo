@@ -1,0 +1,2 @@
+[console_scripts]
+merizzi2024 = merizzi2024.cli:main

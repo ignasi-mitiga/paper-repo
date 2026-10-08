@@ -1,0 +1,49 @@
+# Shrunken configuration of the same architecture, used by the tests and for quick
+# synthetic runs. Shapes keep the paper's ~4.9x ratio (13x13 -> 64x64).
+name: small
+data:
+  root: data/synthetic-small
+  splits:
+    train: {hr: train_hr.npy, lr: train_lr.npy}
+    test: {hr: test_hr.npy, lr: test_lr.npy}
+  train_split: train
+  test_splits: [test]
+  hr_shape: [64, 64]
+  lr_shape: [13, 13]
+  frame_offsets: [-2, -1, 0, 1]
+  hr_max: null        # filled in by `merizzi2024 make-synthetic` / `prepare`
+  lr_max: null
+  standardize: true
+  stats: null         # per-channel mean/var, filled in by the prepare step
+synthetic:
+  num_train: 768
+  num_test: 192
+  blur_sigma: 1.5
+  seed: 0
+model:
+  widths: [16, 32, 64, 96]
+  block_depth: 1
+  embedding_dims: 16
+  embedding_max_frequency: 1000.0
+  bottleneck_attention: true
+  schedule: cosine
+  min_signal_rate: 0.015
+  max_signal_rate: 0.95
+  ema_decay: 0.99
+train:
+  batch_size: 8
+  max_steps: 300
+  lr: 1.0e-3
+  lr_final: 1.0e-4
+  weight_decay: 1.0e-5
+  weight_decay_final: 1.0e-6
+  precision: 32-true
+  val_every_n_steps: 100
+  val_batches: 1
+  seed: 0
+  num_workers: 0
+  out_dir: runs/small
+sample:
+  diffusion_steps: 5
+  ensemble_size: 4
+  batch_size: 16

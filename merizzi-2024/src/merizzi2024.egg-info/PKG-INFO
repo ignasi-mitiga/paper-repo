@@ -1,0 +1,24 @@
+Metadata-Version: 2.4
+Name: merizzi2024
+Version: 0.1.0
+Summary: PyTorch reimplementation of Merizzi, Asperti & Colamonaco (2024): wind speed super-resolution from ERA5 to CERRA via diffusion models
+License: MIT
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: torch>=2.1
+Requires-Dist: lightning>=2.2
+Requires-Dist: numpy>=1.24
+Requires-Dist: scipy>=1.10
+Requires-Dist: scikit-image>=0.21
+Requires-Dist: pyyaml>=6
+Requires-Dist: matplotlib>=3.7
+Provides-Extra: era5
+Requires-Dist: xarray>=2023.1; extra == "era5"
+Requires-Dist: zarr>=2.16; extra == "era5"
+Requires-Dist: gcsfs>=2023.1; extra == "era5"
+Provides-Extra: dev
+Requires-Dist: pytest>=7; extra == "dev"
+Requires-Dist: ruff>=0.4; extra == "dev"
+Requires-Dist: tensorboard; extra == "dev"
+Dynamic: license-file

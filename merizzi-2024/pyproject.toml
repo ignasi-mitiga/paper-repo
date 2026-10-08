@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "merizzi2024"
+version = "0.1.0"
+description = "PyTorch reimplementation of Merizzi, Asperti & Colamonaco (2024): wind speed super-resolution from ERA5 to CERRA via diffusion models"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "torch>=2.1",
+    "lightning>=2.2",
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "scikit-image>=0.21",
+    "pyyaml>=6",
+    "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+era5 = ["xarray>=2023.1", "zarr>=2.16", "gcsfs>=2023.1"]
+dev = ["pytest>=7", "ruff>=0.4", "tensorboard"]
+
+[project.scripts]
+merizzi2024 = "merizzi2024.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: long-running tests, run with `pytest -m slow`"]
+addopts = "-m 'not slow'"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
